@@ -1,35 +1,24 @@
-import aiohttp
-import os
-import json
+from transformers import pipeline
 from typing import Dict, Any
 
-API_URL = "https://api-inference.huggingface.co/models/distil-whisper/distil-large-v3"
-headers = {"Authorization": f"Bearer {os.getenv('HUGGINGFACE_API_KEY')}"}
+# Initialize the transcription pipeline
+transcriber = pipeline("automatic-speech-recognition", model="distil-whisper/distil-large-v3")
 
 async def send_to_voice_AI(audio_data: bytes) -> Dict[str, Any]:
-    print("Sending to voice AI")
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(API_URL, headers=headers, data=audio_data) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    error_text = await response.text()
-                    error_json = json.loads(error_text)
-                    return {
-                        "text": f"error: {error_json.get('error', 'Unknown error')}\n"
-                                f"Estimated time to load: {error_json.get('estimated_time', 'unknown')} seconds"
-                    }
-        except aiohttp.ClientError as e:
-            return {"text": f"Network error: {str(e)}"}
-        except json.JSONDecodeError:
-            return {"text": "Error: Unable to parse API response"}
+    """
+    Transcribes audio data using the Hugging Face Whisper model.
 
-# Example usage:
-# import asyncio
-# async def example():
-#     with open("sample1.flac", "rb") as f:
-#         audio_data = f.read()
-#     output = await send_to_voice_AI(audio_data)
-#     print(output)
-# asyncio.run(example())
+    Args:
+        audio_data (bytes): The raw audio data to be transcribed.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the transcription result or error message.
+    """
+    print("Transcribing audio")
+    try:
+        # Transcribe the audio
+        result = transcriber(audio_data)
+        return {"text": result["text"]}
+    except Exception as e:
+        print(f"Error during transcription: {str(e)}")
+        return {"text": "Sorry, an error occurred during transcription."}
